@@ -1131,9 +1131,11 @@ void OpenVRInterface::renderSpectatorTarget(Graphics *g, RenderTarget *rt)
 				const auto focus = Vector3(center.x, center.y, center.z);
 				const auto forward = Vector3(m_spectatorSubject[8], m_spectatorSubject[9], m_spectatorSubject[10]).normalize();
 				const auto right = Vector3(m_spectatorSubject[0], m_spectatorSubject[1], m_spectatorSubject[2]).normalize();
-				const float distance = m_spectatorSubjectHeight * 0.65f / std::tan(m_fakeCamera->getFovRad() * 0.5f);
+				const float height = m_spectatorSubjectHeight
+					* Vector3(m_spectatorSubject[4], m_spectatorSubject[5], m_spectatorSubject[6]).length();
+				const float distance = height * 0.65f / std::tan(m_fakeCamera->getFovRad() * 0.5f);
 				const auto camera = focus + (forward * 1.6f + right * 0.7f).normalize() * distance
-					+ Vector3(0, m_spectatorSubjectHeight * 0.15f, 0);
+					+ Vector3(0, height * 0.15f, 0);
 				matCurrentM = Camera::buildMatrixLookAt(camera, focus, Vector3(0, 1, 0));
 			}
 			matCurrentMVP = matCurrentVP * matCurrentM;
@@ -1743,6 +1745,18 @@ Matrix4 OpenVRInterface::getCurrentEyePosMatrix(OpenVRInterface::EYE eye)
 	else if (eye == OpenVRInterface::EYE::EYE_RIGHT)
 		matEyePos = m_mat4eyePosRight;
 	return matEyePos;
+}
+
+bool OpenVRInterface::isHeadsetInUse() const
+{
+#ifdef MCENGINE_FEATURE_OPENVR
+	if (!m_bReady || !m_pHMD) return false;
+	const auto activity = m_pHMD->GetTrackedDeviceActivityLevel(vr::k_unTrackedDeviceIndex_Hmd);
+	return activity == vr::k_EDeviceActivityLevel_UserInteraction
+		|| activity == vr::k_EDeviceActivityLevel_UserInteraction_Timeout;
+#else
+	return false;
+#endif
 }
 
 bool OpenVRInterface::getTrackingPose(TrackingDevice device, Matrix4 &pose) const
