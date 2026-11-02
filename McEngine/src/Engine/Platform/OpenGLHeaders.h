@@ -22,8 +22,6 @@
 #include <gl/glu.h>
 #include <gl/gl.h>
 
-#include <gl/wglext.h>
-#include <gl/glext.h>
 
 #endif
 
