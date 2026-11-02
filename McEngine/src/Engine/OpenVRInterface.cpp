@@ -172,6 +172,10 @@ OpenVRInterface::OpenVRInterface()
 	m_bDDown = false;
 	m_bShiftDown = false;
 	m_bCtrlDown = false;
+	m_bSpaceDown = false;
+	m_bCameraToggleDown = false;
+	m_bCameraFrameDown = false;
+	m_bSpectatorCameraInitialized = false;
 	m_bIsSpectatorDraw = false;
 
 #if !defined(MCENGINE_FEATURE_OPENVR)
@@ -776,7 +780,7 @@ void OpenVRInterface::renderScene(Graphics *g, OpenVRInterface::EYE eye)
 	Matrix4 matCurrentMVP = matCurrentVP * matCurrentM;
 
 	// allow debug position/rotation overrides on the matrices (if not in spectator mode)
-	if (vr_fake_camera_movement.getBool() && !vr_spectator_mode.getBool())
+	if (vr_fake_camera_movement.getBool() && !vr_spectator_mode.getBool() && m_spectatorSubjectHeight == 0)
 	{
 		Matrix4 translation;
 		translation.translate(m_fakeCamera->getPos());
@@ -1125,7 +1129,7 @@ void OpenVRInterface::renderSpectatorTarget(Graphics *g, RenderTarget *rt)
 
 			matCurrentM = Camera::buildMatrixLookAt(m_fakeCamera->getPos(),
 				m_fakeCamera->getPos() + m_fakeCamera->getViewDirection(), m_fakeCamera->getViewUp());
-			if (m_spectatorSubjectHeight > 0)
+			if (m_spectatorSubjectHeight > 0 && !m_bSpectatorCameraInitialized)
 			{
 				const auto center = m_spectatorSubject * Vector4(0, m_spectatorSubjectHeight * 0.5f, 0, 1);
 				const auto focus = Vector3(center.x, center.y, center.z);
@@ -1136,8 +1140,13 @@ void OpenVRInterface::renderSpectatorTarget(Graphics *g, RenderTarget *rt)
 				const float distance = height * 0.65f / std::tan(m_fakeCamera->getFovRad() * 0.5f);
 				const auto camera = focus + (forward * 1.6f + right * 0.7f).normalize() * distance
 					+ Vector3(0, height * 0.15f, 0);
-				matCurrentM = Camera::buildMatrixLookAt(camera, focus, Vector3(0, 1, 0));
+				const auto direction = (focus - camera).normalize();
+				m_fakeCamera->setPos(camera);
+				m_fakeCamera->setRotation(rad2deg(std::atan2(direction.x, direction.z)), rad2deg(std::asin(direction.y)), 0);
+				m_bSpectatorCameraInitialized = true;
 			}
+			matCurrentM = Camera::buildMatrixLookAt(m_fakeCamera->getPos(),
+				m_fakeCamera->getPos() + m_fakeCamera->getViewDirection(), m_fakeCamera->getViewUp());
 			matCurrentMVP = matCurrentVP * matCurrentM;
 
 			m_bIsSpectatorDraw = true;
@@ -1253,8 +1262,13 @@ void OpenVRInterface::update()
 			m_controller = m_controllerLeft;
 	}
 
-	// movement override for debugging (and spectating)
-	if (vr_fake_camera_movement.getBool() || vr_spectator_mode.getBool())
+	if (!engine->hasFocus())
+	{
+		clearCameraMovement();
+		if (m_bCaptureMouse) toggleFakeCameraMouseCapture();
+	}
+	if ((vr_fake_camera_movement.getBool() || vr_spectator_mode.getBool() || m_spectatorSubjectHeight > 0)
+		&& m_bCaptureMouse && engine->hasFocus())
 	{
 		// rotation
 		if (m_bCaptureMouse)
@@ -1262,7 +1276,7 @@ void OpenVRInterface::update()
 			Vector2 rawDelta = engine->getMouse()->getRawDelta();
 			if (rawDelta.x != 0.0f || rawDelta.y != 0.0f)
 			{
-				m_fakeCamera->rotateX(rawDelta.y*vr_mousespeed.getFloat());
+				m_fakeCamera->rotateX(-rawDelta.y*vr_mousespeed.getFloat());
 				m_fakeCamera->rotateY(-rawDelta.x*vr_mousespeed.getFloat());
 			}
 			engine->getMouse()->setPos(engine->getScreenSize() - Vector2(2, 2)); // HACKHACK: works ok-ish for now
@@ -1273,25 +1287,23 @@ void OpenVRInterface::update()
 								0,
 								-((m_bSDown ? 1 : 0) + (m_bWDown ?  -1 : 0)));
 
-		if (velocity.x != 0.0f || velocity.z != 0.0f || velocity.z != 0.0f)
+		if (velocity.x != 0.0f || velocity.z != 0.0f || m_bSpaceDown || m_bCtrlDown)
 		{
-			velocity.normalize();
-			velocity *= engine->getFrameTime();
 			Vector3 camVelocity = m_fakeCamera->getNextPosition(velocity) - m_fakeCamera->getPos();
+			camVelocity.y += (m_bSpaceDown ? 1 : 0) - (m_bCtrlDown ? 1 : 0);
 
 			float speed = vr_noclip_walk_speed.getFloat();
-			if (m_bCtrlDown)
-				speed = vr_noclip_crouch_speed.getFloat();
-			else if (m_bShiftDown)
+			if (m_bShiftDown)
 				speed = vr_noclip_sprint_speed.getFloat();
 
-			camVelocity *= speed;
+			camVelocity.normalize();
+			camVelocity *= speed * std::min(engine->getFrameTime(), 0.05f);
 			Vector3 nextPos = m_fakeCamera->getPos() + camVelocity;
 			m_fakeCamera->setPos(nextPos);
 		}
 
 		// fake controller
-		if (vr_fake_controller_movement.getBool())
+		if (vr_fake_controller_movement.getBool() && m_spectatorSubjectHeight == 0)
 		{
 			m_controller->updateDebug(engine->getMouse()->isLeftDown() ? 1.0f : 0.0f);
 			m_controller->updateMatrixPoseDebug(-m_fakeCamera->getPos(), -m_fakeCamera->getViewDirection(), m_fakeCamera->getViewUp(), -m_fakeCamera->getViewRight());
@@ -1304,7 +1316,15 @@ void OpenVRInterface::update()
 
 void OpenVRInterface::onKeyDown(KeyboardEvent &e)
 {
-	if (!m_bReady) return;
+	if (!m_bReady || !engine->hasFocus()) return;
+	if (e == KEY_C && engine->getKeyboard()->isAltDown()
+		&& (vr_fake_camera_movement.getBool() || vr_spectator_mode.getBool() || m_spectatorSubjectHeight > 0))
+	{
+		if (!m_bCameraToggleDown) toggleFakeCameraMouseCapture();
+		m_bCameraToggleDown = true;
+		e.consume();
+		return;
+	}
 
 	if (m_bCaptureMouse)
 	{
@@ -1320,17 +1340,19 @@ void OpenVRInterface::onKeyDown(KeyboardEvent &e)
 			m_bShiftDown = true;
 		if (e == KEY_CONTROL)
 			m_bCtrlDown = true;
+		if (e == KEY_SPACE)
+			m_bSpaceDown = true;
+		if (e == KEY_F && !m_bCameraFrameDown)
+		{
+			m_bSpectatorCameraInitialized = false;
+			m_bCameraFrameDown = true;
+		}
+		if (e == KEY_ESCAPE)
+			toggleFakeCameraMouseCapture();
 
 		e.consume();
 	}
 
-	// toggle fake camera on ALT + C
-	if (e == KEY_C && engine->getKeyboard()->isAltDown())
-		toggleFakeCameraMouseCapture();
-
-	// always release fake camera mouse capture on ESC
-	if (e == KEY_ESCAPE && m_bCaptureMouse)
-		toggleFakeCameraMouseCapture();
 }
 
 void OpenVRInterface::onKeyUp(KeyboardEvent &e)
@@ -1349,6 +1371,12 @@ void OpenVRInterface::onKeyUp(KeyboardEvent &e)
 		m_bShiftDown = false;
 	if (e == KEY_CONTROL)
 		m_bCtrlDown = false;
+	if (e == KEY_SPACE)
+		m_bSpaceDown = false;
+	if (e == KEY_C)
+		m_bCameraToggleDown = false;
+	if (e == KEY_F)
+		m_bCameraFrameDown = false;
 
 	if (m_bCaptureMouse)
 		e.consume();
@@ -1943,6 +1971,7 @@ void OpenVRInterface::onSpectatorCameraRotationChange(UString oldValue, UString 
 
 void OpenVRInterface::toggleFakeCameraMouseCapture()
 {
+	clearCameraMovement();
 	m_bCaptureMouse = !m_bCaptureMouse;
 	if (m_bCaptureMouse)
 	{
@@ -1957,6 +1986,13 @@ void OpenVRInterface::toggleFakeCameraMouseCapture()
 
 		saveFakeCamera();
 	}
+}
+
+void OpenVRInterface::clearCameraMovement()
+{
+	m_bWDown = m_bADown = m_bSDown = m_bDDown = false;
+	m_bShiftDown = m_bCtrlDown = m_bSpaceDown = false;
+	m_bCameraToggleDown = m_bCameraFrameDown = false;
 }
 
 void OpenVRInterface::saveFakeCamera()
@@ -1983,6 +2019,7 @@ void OpenVRInterface::saveFakeCamera()
 
 void OpenVRInterface::loadFakeCamera()
 {
+	m_bSpectatorCameraInitialized = std::ifstream("cfg/vrspectatorcamera.cfg").good();
 	Console::execConfigFile("vrspectatorcamera");
 }
 

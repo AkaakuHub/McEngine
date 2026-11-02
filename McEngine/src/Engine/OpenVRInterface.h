@@ -69,6 +69,7 @@ public:
 
 	inline Matrix4 getCurrentModelMatrix() const {return m_matCurrentM;}
 	bool isSpectatorDraw() const {return m_bIsSpectatorDraw;}
+	bool isCameraInputCaptured() const {return m_bCaptureMouse;}
 	void setSpectatorSubject(const Matrix4 &transform, float height) { m_spectatorSubject = transform; m_spectatorSubjectHeight = height; }
 	enum class TrackingDevice { Head, LeftHand, RightHand };
 	bool getTrackingPose(TrackingDevice device, Matrix4 &pose) const;
@@ -146,6 +147,7 @@ private:
 #endif
 
 	void toggleFakeCameraMouseCapture();
+	void clearCameraMovement();
 	void saveFakeCamera();
 	void loadFakeCamera();
 
@@ -205,6 +207,10 @@ private:
 	bool m_bDDown;
 	bool m_bShiftDown;
 	bool m_bCtrlDown;
+	bool m_bSpaceDown;
+	bool m_bCameraToggleDown;
+	bool m_bCameraFrameDown;
+	bool m_bSpectatorCameraInitialized;
 	bool m_bIsSpectatorDraw;
 
 	// custom
