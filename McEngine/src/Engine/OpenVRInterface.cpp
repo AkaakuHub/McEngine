@@ -1824,7 +1824,7 @@ bool OpenVRInterface::updateMatrixPoses()
 
 	// update hmd matrix
 	if (m_rTrackedDevicePose[vr::k_unTrackedDeviceIndex_Hmd].bPoseIsValid)
-		m_mat4HMDPose = m_rmat4DevicePose[vr::k_unTrackedDeviceIndex_Hmd].invert();
+		m_mat4HMDPose = Matrix4(m_rmat4DevicePose[vr::k_unTrackedDeviceIndex_Hmd]).invert();
 
 #endif
 
