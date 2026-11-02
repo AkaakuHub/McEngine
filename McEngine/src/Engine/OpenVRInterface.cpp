@@ -398,7 +398,10 @@ bool OpenVRInterface::initCompositor()
 
 #if defined(MCENGINE_FEATURE_OPENVR)
 
-	return vr::VRCompositor();
+	auto *compositor = vr::VRCompositor();
+	if (!compositor) return false;
+	compositor->SetTrackingSpace(vr::TrackingUniverseStanding);
+	return true;
 
 #else
 
