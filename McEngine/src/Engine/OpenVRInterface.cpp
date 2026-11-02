@@ -1131,7 +1131,9 @@ void OpenVRInterface::renderSpectatorTarget(Graphics *g, RenderTarget *rt)
 				const auto focus = Vector3(center.x, center.y, center.z);
 				const auto forward = Vector3(m_spectatorSubject[8], m_spectatorSubject[9], m_spectatorSubject[10]).normalize();
 				const auto right = Vector3(m_spectatorSubject[0], m_spectatorSubject[1], m_spectatorSubject[2]).normalize();
-				const auto camera = focus + (forward * 1.6f + right * 0.7f + Vector3(0, 0.2f, 0)) * m_spectatorSubjectHeight;
+				const float distance = m_spectatorSubjectHeight * 0.65f / std::tan(m_fakeCamera->getFovRad() * 0.5f);
+				const auto camera = focus + (forward * 1.6f + right * 0.7f).normalize() * distance
+					+ Vector3(0, m_spectatorSubjectHeight * 0.15f, 0);
 				matCurrentM = Camera::buildMatrixLookAt(camera, focus, Vector3(0, 1, 0));
 			}
 			matCurrentMVP = matCurrentVP * matCurrentM;
