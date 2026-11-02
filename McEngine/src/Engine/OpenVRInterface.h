@@ -68,6 +68,7 @@ public:
 	inline UString getTrackingSystemName() const {return m_sTrackingSystemName;}
 
 	inline Matrix4 getCurrentModelMatrix() const {return m_matCurrentM;}
+	bool isSpectatorDraw() const {return m_bIsSpectatorDraw;}
 	inline Matrix4 getCurrentViewProjectionMatrix() const {return m_matCurrentVP;}
 	inline Matrix4 getCurrentModelViewProjectionMatrix() const {return m_matCurrentMVP;}
 
