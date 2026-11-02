@@ -74,6 +74,7 @@ public:
 	void setSpectatorSubject(const Matrix4 &transform, float height) { m_spectatorSubject = transform; m_spectatorSubjectHeight = height; }
 	enum class TrackingDevice { Head, LeftHand, RightHand };
 	bool getTrackingPose(TrackingDevice device, Matrix4 &pose) const;
+	bool getRenderedEyePose(Matrix4 &pose) const;
 	bool isHeadsetInUse() const;
 	inline Matrix4 getCurrentViewProjectionMatrix() const {return m_matCurrentVP;}
 	inline Matrix4 getCurrentModelViewProjectionMatrix() const {return m_matCurrentMVP;}

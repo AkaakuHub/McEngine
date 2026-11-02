@@ -41,7 +41,7 @@ ConVar vr_ss_compositor("vr_ss_compositor", 1.6f, FCVAR_NONE, "external composit
 ConVar vr_compositor_submit_double("vr_compositor_submit_double", true, FCVAR_NONE, "use separate submission texture for each eye (trades VRAM for speed/compatibility)");
 ConVar vr_compositor_texture_size_max("vr_compositor_texture_size_max", 4096.0f, FCVAR_NONE, "submission texture size is force clamped to less or equal to this value");
 ConVar vr_aa("vr_aa", 2.0f, FCVAR_NONE, "antialiasing/multisampling factor. valid values are: 0, 2, 4, 8, 16");
-ConVar vr_nearz("vr_nearz", 0.1f, FCVAR_NONE);
+ConVar vr_nearz("vr_nearz", 0.01f, FCVAR_NONE);
 ConVar vr_farz("vr_farz", 300.0f, FCVAR_NONE);
 
 ConVar vr_draw_lighthouse_models("vr_draw_lighthouse_models", true, FCVAR_NONE);
@@ -1778,6 +1778,15 @@ bool OpenVRInterface::isHeadsetInUse() const
 #else
 	return false;
 #endif
+}
+
+bool OpenVRInterface::getRenderedEyePose(Matrix4 &pose) const
+{
+	if (!getTrackingPose(TrackingDevice::Head, pose)) return false;
+	const auto left = (m_mat4eyePosLeft * m_mat4HMDPose).invert();
+	const auto right = (m_mat4eyePosRight * m_mat4HMDPose).invert();
+	for (int axis = 12; axis < 15; ++axis) pose[axis] = (left[axis] + right[axis]) * 0.5f;
+	return true;
 }
 
 bool OpenVRInterface::getTrackingPose(TrackingDevice device, Matrix4 &pose) const
