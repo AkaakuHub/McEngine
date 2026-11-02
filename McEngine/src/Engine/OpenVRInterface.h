@@ -69,6 +69,7 @@ public:
 
 	inline Matrix4 getCurrentModelMatrix() const {return m_matCurrentM;}
 	bool isSpectatorDraw() const {return m_bIsSpectatorDraw;}
+	void setSpectatorSubject(const Matrix4 &transform, float height) { m_spectatorSubject = transform; m_spectatorSubjectHeight = height; }
 	enum class TrackingDevice { Head, LeftHand, RightHand };
 	bool getTrackingPose(TrackingDevice device, Matrix4 &pose) const;
 	inline Matrix4 getCurrentViewProjectionMatrix() const {return m_matCurrentVP;}
@@ -161,6 +162,8 @@ private:
 
 	// matrices
 	Matrix4 m_mat4HMDPose;
+	Matrix4 m_spectatorSubject;
+	float m_spectatorSubjectHeight = 0;
 	Matrix4 m_mat4eyePosLeft;
 	Matrix4 m_mat4eyePosRight;
 

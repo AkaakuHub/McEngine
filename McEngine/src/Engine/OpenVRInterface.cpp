@@ -679,7 +679,7 @@ void OpenVRInterface::draw(Graphics *g)
 	g->setDepthBuffer(false);
 
 	// viewer window (without spectator mode)
-	if (!vr_spectator_mode.getBool() && vr_draw_hmd_to_window.getBool())
+	if (!vr_spectator_mode.getBool() && m_spectatorSubjectHeight == 0 && vr_draw_hmd_to_window.getBool())
 		renderStereoToWindow(g);
 
 #ifdef MCENGINE_FEATURE_OPENGL
@@ -753,7 +753,7 @@ void OpenVRInterface::draw(Graphics *g)
 #endif
 
 	// spectator mode
-	if (vr_spectator_mode.getBool())
+	if (vr_spectator_mode.getBool() || m_spectatorSubjectHeight > 0)
 	{
 		g->setDepthBuffer(true);
 		{
@@ -763,7 +763,7 @@ void OpenVRInterface::draw(Graphics *g)
 	}
 
 	// viewer window (with spectator mode)
-	if (vr_spectator_mode.getBool() && vr_draw_hmd_to_window.getBool())
+	if ((vr_spectator_mode.getBool() && vr_draw_hmd_to_window.getBool()) || m_spectatorSubjectHeight > 0)
 		renderStereoToWindow(g);
 }
 
@@ -878,7 +878,7 @@ void OpenVRInterface::renderScene(Graphics *g,  Matrix4 &matCurrentEye, Matrix4 
 	m_renderModelShader->disable();
 
 	// draw head rendermodel if in spectator mode/draw
-	if (m_bIsSpectatorDraw && vr_draw_head_model.getBool())
+	if (m_bIsSpectatorDraw && vr_draw_head_model.getBool() && m_spectatorSubjectHeight == 0)
 	{
 		// lazy loading
 		if (m_headRenderModel == NULL)
@@ -1125,6 +1125,15 @@ void OpenVRInterface::renderSpectatorTarget(Graphics *g, RenderTarget *rt)
 
 			matCurrentM = Camera::buildMatrixLookAt(m_fakeCamera->getPos(),
 				m_fakeCamera->getPos() + m_fakeCamera->getViewDirection(), m_fakeCamera->getViewUp());
+			if (m_spectatorSubjectHeight > 0)
+			{
+				const auto center = m_spectatorSubject * Vector4(0, m_spectatorSubjectHeight * 0.5f, 0, 1);
+				const auto focus = Vector3(center.x, center.y, center.z);
+				const auto forward = Vector3(m_spectatorSubject[8], m_spectatorSubject[9], m_spectatorSubject[10]).normalize();
+				const auto right = Vector3(m_spectatorSubject[0], m_spectatorSubject[1], m_spectatorSubject[2]).normalize();
+				const auto camera = focus + (forward * 1.6f + right * 0.7f + Vector3(0, 0.2f, 0)) * m_spectatorSubjectHeight;
+				matCurrentM = Camera::buildMatrixLookAt(camera, focus, Vector3(0, 1, 0));
+			}
 			matCurrentMVP = matCurrentVP * matCurrentM;
 
 			m_bIsSpectatorDraw = true;
@@ -1145,9 +1154,9 @@ void OpenVRInterface::renderStereoToWindow(Graphics *g)
 {
 	g->setBlending(false);
 	{
-		if (vr_draw_hmd_to_window.getBool())
+		if (vr_draw_hmd_to_window.getBool() || m_spectatorSubjectHeight > 0)
 		{
-			if (vr_draw_hmd_to_window_draw_both_eyes.getBool())
+			if (vr_draw_hmd_to_window_draw_both_eyes.getBool() && !vr_spectator_mode.getBool() && m_spectatorSubjectHeight == 0)
 			{
 				m_leftEye->draw(g, 0, 0, engine->getScreenWidth()/2, engine->getScreenHeight());
 				m_rightEye->draw(g, engine->getScreenWidth()/2, 0, engine->getScreenWidth()/2, engine->getScreenHeight());
