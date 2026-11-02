@@ -69,6 +69,8 @@ public:
 
 	inline Matrix4 getCurrentModelMatrix() const {return m_matCurrentM;}
 	bool isSpectatorDraw() const {return m_bIsSpectatorDraw;}
+	enum class TrackingDevice { Head, LeftHand, RightHand };
+	bool getTrackingPose(TrackingDevice device, Matrix4 &pose) const;
 	inline Matrix4 getCurrentViewProjectionMatrix() const {return m_matCurrentVP;}
 	inline Matrix4 getCurrentModelViewProjectionMatrix() const {return m_matCurrentMVP;}
 

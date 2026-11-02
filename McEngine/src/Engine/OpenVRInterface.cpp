@@ -1731,6 +1731,22 @@ Matrix4 OpenVRInterface::getCurrentEyePosMatrix(OpenVRInterface::EYE eye)
 	return matEyePos;
 }
 
+bool OpenVRInterface::getTrackingPose(TrackingDevice device, Matrix4 &pose) const
+{
+#ifdef MCENGINE_FEATURE_OPENVR
+	if (!m_bReady || !m_pHMD) return false;
+	const auto index = device == TrackingDevice::Head ? vr::k_unTrackedDeviceIndex_Hmd
+		: m_pHMD->GetTrackedDeviceIndexForControllerRole(device == TrackingDevice::LeftHand
+			? vr::TrackedControllerRole_LeftHand : vr::TrackedControllerRole_RightHand);
+	if (index >= vr::k_unMaxTrackedDeviceCount || !m_rTrackedDevicePose[index].bPoseIsValid
+		|| !m_rTrackedDevicePose[index].bDeviceIsConnected) return false;
+	pose = m_rmat4DevicePose[index];
+	return true;
+#else
+	return false;
+#endif
+}
+
 bool OpenVRInterface::updateMatrixPoses()
 {
 	if (!m_bReady) return false;
