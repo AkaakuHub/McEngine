@@ -1114,13 +1114,14 @@ void OpenVRInterface::renderSpectatorTarget(Graphics *g, RenderTarget *rt)
 		{
 			Matrix4 matCurrentEye;
 			Matrix4 matCurrentM;
-			Matrix4 matCurrentP = getCurrentProjectionMatrix(OpenVRInterface::EYE::EYE_LEFT);
-			Matrix4 matCurrentVP = getCurrentViewProjectionMatrix(OpenVRInterface::EYE::EYE_LEFT);
+			Matrix4 matCurrentP = Camera::buildMatrixPerspectiveFovVertical(
+				m_fakeCamera->getFovRad(), rt->getWidth() / static_cast<float>(rt->getHeight()),
+				vr_nearz.getFloat(), vr_farz.getFloat());
+			Matrix4 matCurrentVP = matCurrentP;
 			Matrix4 matCurrentMVP;
 
-			Matrix4 translation;
-			translation.translate(m_fakeCamera->getPos());
-			matCurrentM = m_fakeCamera->getRotation().getMatrix() * translation;
+			matCurrentM = Camera::buildMatrixLookAt(m_fakeCamera->getPos(),
+				m_fakeCamera->getPos() + m_fakeCamera->getViewDirection(), m_fakeCamera->getViewUp());
 			matCurrentMVP = matCurrentVP * matCurrentM;
 
 			m_bIsSpectatorDraw = true;
