@@ -38,7 +38,7 @@ ConVar vr_bug_workaround_triggerhapticpulse("vr_bug_workaround_triggerhapticpuls
 
 ConVar vr_ss("vr_ss", 1.3f, FCVAR_NONE, "internal engine supersampling factor. the recommended rendertarget size, as reported by OpenVR, is multiplied by this value");
 ConVar vr_ss_compositor("vr_ss_compositor", 1.6f, FCVAR_NONE, "external compositor submission texture supersampling factor. the recommended rendertarget size, as reported by OpenVR, is multiplied by this value");
-ConVar vr_compositor_submit_double("vr_compositor_submit_double", false, FCVAR_NONE, "use separate submission texture for each eye (trades VRAM for speed/compatibility)");
+ConVar vr_compositor_submit_double("vr_compositor_submit_double", true, FCVAR_NONE, "use separate submission texture for each eye (trades VRAM for speed/compatibility)");
 ConVar vr_compositor_texture_size_max("vr_compositor_texture_size_max", 4096.0f, FCVAR_NONE, "submission texture size is force clamped to less or equal to this value");
 ConVar vr_aa("vr_aa", 2.0f, FCVAR_NONE, "antialiasing/multisampling factor. valid values are: 0, 2, 4, 8, 16");
 ConVar vr_nearz("vr_nearz", 0.1f, FCVAR_NONE);
@@ -1763,6 +1763,15 @@ bool OpenVRInterface::isHeadsetInUse() const
 {
 #ifdef MCENGINE_FEATURE_OPENVR
 	if (!m_bReady || !m_pHMD) return false;
+	vr::ETrackedPropertyError error = vr::TrackedProp_Success;
+	const bool hasProximity = m_pHMD->GetBoolTrackedDeviceProperty(vr::k_unTrackedDeviceIndex_Hmd,
+		vr::Prop_ContainsProximitySensor_Bool, &error);
+	if (error == vr::TrackedProp_Success && hasProximity)
+	{
+		vr::VRControllerState_t state = {};
+		if (!m_pHMD->GetControllerState(vr::k_unTrackedDeviceIndex_Hmd, &state, sizeof(state))) return false;
+		return (state.ulButtonPressed & (1ULL << vr::k_EButton_ProximitySensor)) != 0;
+	}
 	const auto activity = m_pHMD->GetTrackedDeviceActivityLevel(vr::k_unTrackedDeviceIndex_Hmd);
 	return activity == vr::k_EDeviceActivityLevel_UserInteraction
 		|| activity == vr::k_EDeviceActivityLevel_UserInteraction_Timeout;
