@@ -601,11 +601,13 @@ void Engine::onMouseRawMove(int xDelta, int yDelta, bool absolute, bool virtualD
 
 void Engine::onMouseWheelVertical(int delta)
 {
+	if (openvr != NULL && openvr->isCameraInputCaptured()) return;
 	m_mouse->onWheelVertical(delta);
 }
 
 void Engine::onMouseWheelHorizontal(int delta)
 {
+	if (openvr != NULL && openvr->isCameraInputCaptured()) return;
 	m_mouse->onWheelHorizontal(delta);
 }
 
@@ -617,6 +619,7 @@ std::mutex g_engineMouseLeftClickMutex;
 
 void Engine::onMouseLeftChange(bool mouseLeftDown)
 {
+	if (mouseLeftDown && openvr != NULL && openvr->isCameraInputCaptured()) return;
 #ifdef MCENGINE_FEATURE_MULTITHREADING
 
 	std::lock_guard<std::mutex> lk(g_engineMouseLeftClickMutex); // async calls from WinRealTimeStylus must be protected
@@ -629,22 +632,26 @@ void Engine::onMouseLeftChange(bool mouseLeftDown)
 
 void Engine::onMouseMiddleChange(bool mouseMiddleDown)
 {
+	if (mouseMiddleDown && openvr != NULL && openvr->isCameraInputCaptured()) return;
 	m_mouse->onMiddleChange(mouseMiddleDown);
 }
 
 void Engine::onMouseRightChange(bool mouseRightDown)
 {
+	if (mouseRightDown && openvr != NULL && openvr->isCameraInputCaptured()) return;
 	if (m_mouse->isRightDown() != mouseRightDown) // necessary due to Touch, would cause double clicks otherwise
 		m_mouse->onRightChange(mouseRightDown);
 }
 
 void Engine::onMouseButton4Change(bool mouse4down)
 {
+	if (mouse4down && openvr != NULL && openvr->isCameraInputCaptured()) return;
 	m_mouse->onButton4Change(mouse4down);
 }
 
 void Engine::onMouseButton5Change(bool mouse5down)
 {
+	if (mouse5down && openvr != NULL && openvr->isCameraInputCaptured()) return;
 	m_mouse->onButton5Change(mouse5down);
 }
 

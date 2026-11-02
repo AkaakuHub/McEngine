@@ -61,7 +61,6 @@ ConVar vr_fake_controller_movement("vr_fake_controller_movement", false, FCVAR_N
 ConVar vr_reset_fake_camera_movement("vr_reset_fake_camera_movement");
 ConVar vr_noclip_walk_speed("vr_noclip_walk_speed", 4.0f, FCVAR_NONE);
 ConVar vr_noclip_sprint_speed("vr_noclip_sprint_speed", 20.0f, FCVAR_NONE);
-ConVar vr_noclip_crouch_speed("vr_noclip_crouch_speed", 1.0f, FCVAR_NONE);
 ConVar vr_mousespeed("vr_mousespeed", 0.18f, FCVAR_NONE);
 
 ConVar vr_console_overlay("vr_console_overlay", false, FCVAR_NONE);
@@ -1127,8 +1126,6 @@ void OpenVRInterface::renderSpectatorTarget(Graphics *g, RenderTarget *rt)
 			Matrix4 matCurrentVP = matCurrentP;
 			Matrix4 matCurrentMVP;
 
-			matCurrentM = Camera::buildMatrixLookAt(m_fakeCamera->getPos(),
-				m_fakeCamera->getPos() + m_fakeCamera->getViewDirection(), m_fakeCamera->getViewUp());
 			if (m_spectatorSubjectHeight > 0 && !m_bSpectatorCameraInitialized)
 			{
 				const auto center = m_spectatorSubject * Vector4(0, m_spectatorSubjectHeight * 0.5f, 0, 1);
@@ -1297,7 +1294,7 @@ void OpenVRInterface::update()
 				speed = vr_noclip_sprint_speed.getFloat();
 
 			camVelocity.normalize();
-			camVelocity *= speed * std::min(engine->getFrameTime(), 0.05f);
+			camVelocity *= speed * static_cast<float>(std::min(engine->getFrameTime(), 0.05));
 			Vector3 nextPos = m_fakeCamera->getPos() + camVelocity;
 			m_fakeCamera->setPos(nextPos);
 		}
@@ -1309,8 +1306,6 @@ void OpenVRInterface::update()
 			m_controller->updateMatrixPoseDebug(-m_fakeCamera->getPos(), -m_fakeCamera->getViewDirection(), m_fakeCamera->getViewUp(), -m_fakeCamera->getViewRight());
 		}
 
-		if (!engine->hasFocus() && m_bCaptureMouse)
-			toggleFakeCameraMouseCapture();
 	}
 }
 
@@ -1972,6 +1967,15 @@ void OpenVRInterface::onSpectatorCameraRotationChange(UString oldValue, UString 
 void OpenVRInterface::toggleFakeCameraMouseCapture()
 {
 	clearCameraMovement();
+	if (!m_bCaptureMouse)
+	{
+		auto *mouse = engine->getMouse();
+		if (mouse->isLeftDown()) mouse->onLeftChange(false);
+		if (mouse->isMiddleDown()) mouse->onMiddleChange(false);
+		if (mouse->isRightDown()) mouse->onRightChange(false);
+		if (mouse->isButton4Down()) mouse->onButton4Change(false);
+		if (mouse->isButton5Down()) mouse->onButton5Change(false);
+	}
 	m_bCaptureMouse = !m_bCaptureMouse;
 	if (m_bCaptureMouse)
 	{
