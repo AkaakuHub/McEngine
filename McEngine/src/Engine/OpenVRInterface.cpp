@@ -172,7 +172,6 @@ OpenVRInterface::OpenVRInterface()
 	m_bShiftDown = false;
 	m_bCtrlDown = false;
 	m_bSpaceDown = false;
-	m_bCameraToggleDown = false;
 	m_bCameraFrameDown = false;
 	m_bSpectatorCameraInitialized = false;
 	m_bIsSpectatorDraw = false;
@@ -1312,14 +1311,6 @@ void OpenVRInterface::update()
 void OpenVRInterface::onKeyDown(KeyboardEvent &e)
 {
 	if (!m_bReady || !engine->hasFocus()) return;
-	if (e == KEY_C && engine->getKeyboard()->isAltDown()
-		&& (vr_fake_camera_movement.getBool() || vr_spectator_mode.getBool() || m_spectatorSubjectHeight > 0))
-	{
-		if (!m_bCameraToggleDown) toggleFakeCameraMouseCapture();
-		m_bCameraToggleDown = true;
-		e.consume();
-		return;
-	}
 
 	if (m_bCaptureMouse)
 	{
@@ -1368,8 +1359,6 @@ void OpenVRInterface::onKeyUp(KeyboardEvent &e)
 		m_bCtrlDown = false;
 	if (e == KEY_SPACE)
 		m_bSpaceDown = false;
-	if (e == KEY_C)
-		m_bCameraToggleDown = false;
 	if (e == KEY_F)
 		m_bCameraFrameDown = false;
 
@@ -1992,11 +1981,25 @@ void OpenVRInterface::toggleFakeCameraMouseCapture()
 	}
 }
 
+bool OpenVRInterface::onSpectatorMouseRightChange(bool down)
+{
+	if (!m_bReady) return false;
+	if (down)
+	{
+		if (!engine->hasFocus() || (!vr_spectator_mode.getBool() && m_spectatorSubjectHeight <= 0)) return false;
+		if (!m_bCaptureMouse) toggleFakeCameraMouseCapture();
+		return true;
+	}
+	if (!m_bCaptureMouse) return false;
+	toggleFakeCameraMouseCapture();
+	return true;
+}
+
 void OpenVRInterface::clearCameraMovement()
 {
 	m_bWDown = m_bADown = m_bSDown = m_bDDown = false;
 	m_bShiftDown = m_bCtrlDown = m_bSpaceDown = false;
-	m_bCameraToggleDown = m_bCameraFrameDown = false;
+	m_bCameraFrameDown = false;
 }
 
 void OpenVRInterface::saveFakeCamera()

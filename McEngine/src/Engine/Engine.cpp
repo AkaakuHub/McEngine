@@ -638,7 +638,7 @@ void Engine::onMouseMiddleChange(bool mouseMiddleDown)
 
 void Engine::onMouseRightChange(bool mouseRightDown)
 {
-	if (mouseRightDown && openvr != NULL && openvr->isCameraInputCaptured()) return;
+	if (openvr != NULL && openvr->onSpectatorMouseRightChange(mouseRightDown)) return;
 	if (m_mouse->isRightDown() != mouseRightDown) // necessary due to Touch, would cause double clicks otherwise
 		m_mouse->onRightChange(mouseRightDown);
 }
