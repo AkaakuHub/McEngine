@@ -24,7 +24,7 @@ bool overlayDepthTest(bool writeDepth)
     glColor3f(0, 0, 1); quad(-1, 0, 24);
     glDepthMask(writeDepth ? GL_TRUE : GL_FALSE);
     glColor3f(1, 0, 0); quad(-1, 1, 25);
-    glColor3f(0, 1, 0); quad(-1, 1, 25.0005f);
+    glColor3f(0, 1, 0); quad(-1, 1, 24.9995f);
     unsigned char left[3] = {}, right[3] = {};
     glFinish();
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
