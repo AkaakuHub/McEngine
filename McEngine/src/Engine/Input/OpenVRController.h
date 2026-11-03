@@ -86,6 +86,7 @@ public:
 
 	float getTrigger();
 	Vector2 getTouchpad();
+	Vector2 getJoystick();
 
 #ifdef MCENGINE_FEATURE_OPENVR
 

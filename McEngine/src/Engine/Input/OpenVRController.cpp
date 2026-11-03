@@ -167,6 +167,24 @@ Vector2 OpenVRController::getTouchpad()
 #endif
 }
 
+Vector2 OpenVRController::getJoystick()
+{
+#ifdef MCENGINE_FEATURE_OPENVR
+	if (!m_hmd) return Vector2(0, 0);
+	const auto device = m_hmd->GetTrackedDeviceIndexForControllerRole(roleIdToOpenVR(m_role));
+	if (device >= vr::k_unMaxTrackedDeviceCount || !m_hmd->IsTrackedDeviceConnected(device)) return Vector2(0, 0);
+	for (int axis = 0; axis < vr::k_unControllerStateAxisCount; ++axis)
+	{
+		vr::ETrackedPropertyError error;
+		const auto type = m_hmd->GetInt32TrackedDeviceProperty(device,
+			static_cast<vr::ETrackedDeviceProperty>(vr::Prop_Axis0Type_Int32 + axis), &error);
+		if (error == vr::TrackedProp_Success && type == vr::k_eControllerAxis_Joystick)
+			return Vector2(m_rAxis[axis].x, m_rAxis[axis].y);
+	}
+#endif
+	return Vector2(0, 0);
+}
+
 #ifdef MCENGINE_FEATURE_OPENVR
 
 vr::EVRButtonId OpenVRController::buttonIdToOpenVR(OpenVRController::BUTTON buttonId)
