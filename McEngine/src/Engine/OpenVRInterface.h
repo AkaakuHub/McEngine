@@ -107,7 +107,7 @@ private:
 	bool initShaders();
 
 	void renderStereoTargets(Graphics *g);
-	void renderSpectatorTarget(Graphics *g, RenderTarget *rt);
+	void renderSpectatorTarget(Graphics *g);
 	void renderScene(Graphics *g, OpenVRInterface::EYE eye);
 	void renderScene(Graphics *g,  Matrix4 &matCurrentEye, Matrix4 &matCurrentM, Matrix4 &matCurrentP, Matrix4 &matCurrentVP, Matrix4 &matCurrentMVP);
 	void renderStereoToWindow(Graphics *g);
@@ -183,6 +183,7 @@ private:
 	// framebuffers
 	RenderTarget *m_leftEye;
 	RenderTarget *m_rightEye;
+	RenderTarget *m_spectatorTarget = nullptr;
 	RenderTarget *m_compositorEye1;
 	RenderTarget *m_compositorEye2;
 	RenderTarget *m_debugOverlay;

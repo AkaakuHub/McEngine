@@ -658,7 +658,7 @@ void OpenVRInterface::draw(Graphics *g)
 		if (vr_spectator_mode.getBool() || m_spectatorSubjectHeight > 0)
 		{
 			g->setDepthBuffer(true);
-			renderSpectatorTarget(g, m_leftEye);
+			renderSpectatorTarget(g);
 			g->setDepthBuffer(false);
 			renderStereoToWindow(g);
 		}
@@ -771,7 +771,7 @@ void OpenVRInterface::draw(Graphics *g)
 	{
 		g->setDepthBuffer(true);
 		{
-			renderSpectatorTarget(g, m_leftEye);
+			renderSpectatorTarget(g);
 		}
 		g->setDepthBuffer(false);
 	}
@@ -1119,8 +1119,21 @@ void OpenVRInterface::renderStereoTargets(Graphics *g)
     g->onResolutionChange(resolutionBackup);
 }
 
-void OpenVRInterface::renderSpectatorTarget(Graphics *g, RenderTarget *rt)
+void OpenVRInterface::renderSpectatorTarget(Graphics *g)
 {
+	const int width = std::max(1, engine->getScreenWidth());
+	const int height = std::max(1, engine->getScreenHeight());
+	if (!m_spectatorTarget)
+	{
+		m_spectatorTarget = engine->getResourceManager()->createRenderTarget(width, height);
+		m_spectatorTarget->setClearColorOnDraw(true);
+		m_spectatorTarget->setClearDepthOnDraw(true);
+		const float brightness = vr_background_brightness.getFloat();
+		m_spectatorTarget->setClearColor(COLORf(0, brightness, brightness, brightness + (brightness > 0 ? 0.03f : 0)));
+	}
+	else if (m_spectatorTarget->getWidth() != width || m_spectatorTarget->getHeight() != height)
+		m_spectatorTarget->rebuild(width, height);
+	auto *rt = m_spectatorTarget;
 	// backup engine resolution
 	Vector2 resolutionBackup = g->getResolution();
 
@@ -1183,7 +1196,10 @@ void OpenVRInterface::renderStereoToWindow(Graphics *g)
 				m_rightEye->draw(g, engine->getScreenWidth()/2, 0, engine->getScreenWidth()/2, engine->getScreenHeight());
 			}
 			else
-				m_leftEye->draw(g, 0, 0, engine->getScreenWidth(), engine->getScreenHeight());
+			{
+				auto *target = (vr_spectator_mode.getBool() || m_spectatorSubjectHeight > 0) ? m_spectatorTarget : m_leftEye;
+				if (target) target->draw(g, 0, 0, engine->getScreenWidth(), engine->getScreenHeight());
+			}
 		}
 	}
 	g->setBlending(true);
