@@ -190,6 +190,8 @@ SoundEngine::SoundEngine()
 
 	// lib version check
 	m_iBASSVersion = BASS_GetVersion();
+	BASS_SetConfig(BASS_CONFIG_DEV_DEFAULT, TRUE);
+	BASS_SetConfig(BASS_CONFIG_UNICODE, TRUE);
 	debugLog("SoundEngine: BASS version = 0x%08x\n", m_iBASSVersion);
 	if (HIWORD(m_iBASSVersion) != BASSVERSION)
 	{
@@ -657,16 +659,18 @@ void SoundEngine::restart()
 
 void SoundEngine::update()
 {
-	/*
-	if (snd_change_check_interval.getFloat() > 0.0f)
+#if defined(MCENGINE_FEATURE_SOUND) && !defined(MCENGINE_FEATURE_BASS_WASAPI)
+	if (m_bReady && engine->getTime() >= m_fPrevOutputDeviceChangeCheckTime)
 	{
-		if (engine->getTime() > m_fPrevOutputDeviceChangeCheckTime)
+		m_fPrevOutputDeviceChangeCheckTime = engine->getTime() + 1.0;
+		if (!BASS_IsStarted())
 		{
-			m_fPrevOutputDeviceChangeCheckTime = engine->getTime() + snd_change_check_interval.getFloat();
-			///updateOutputDevices(true, false); // NOTE: commented for now, since it's not yet finished anyway
+			const bool resumed = BASS_Start();
+			debugLog("SoundEngine: output interrupted, resume=%i error=%i device=%u\n",
+				resumed, resumed ? 0 : BASS_ErrorGetCode(), BASS_GetDevice());
 		}
 	}
-	*/
+#endif
 }
 
 bool SoundEngine::play(Sound *snd, float pan, float pitch)
