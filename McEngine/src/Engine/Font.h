@@ -9,6 +9,7 @@
 #define FONT_H
 
 #include "Resource.h"
+#include <memory>
 
 class Image;
 class TextureAtlas;
@@ -71,6 +72,8 @@ protected:
 	bool addGlyph(wchar_t ch);
 
 	void addAtlasGlyphToVao(Graphics *g, wchar_t ch, float &advanceX, VertexArrayObject *vao);
+	McFont &glyphFont(wchar_t ch) const;
+	mutable std::unordered_map<unsigned int, std::unique_ptr<McFont>> m_unicodePages;
 
 	int m_iFontSize;
 	bool m_bAntialiasing;

@@ -11,6 +11,7 @@
 #include "VertexArrayObject.h"
 #include "Engine.h"
 #include "ConVar.h"
+#include <cmath>
 
 #include <ft2build.h>
 #include <freetype.h>
@@ -21,6 +22,7 @@
 
 ConVar r_drawstring_max_string_length("r_drawstring_max_string_length", 65536, FCVAR_CHEAT, "maximum number of characters per call, sanity/memory buffer limit");
 ConVar r_debug_drawstring_unbind("r_debug_drawstring_unbind", false, FCVAR_NONE);
+ConVar r_font_unicode_file("r_font_unicode_file", "C:/Windows/Fonts/meiryo.ttc", FCVAR_NONE);
 
 static void renderFTGlyphToTextureAtlas(FT_Library library, FT_Face face, wchar_t ch, TextureAtlas *textureAtlas, bool antialiasing, std::unordered_map<wchar_t, McFont::GLYPH_METRICS> *glyphMetrics);
 static unsigned char *unpackMonoBitmap(FT_Bitmap bitmap);
@@ -101,7 +103,10 @@ void McFont::init()
 	FT_Set_Char_Size(face, m_iFontSize*64, m_iFontSize*64, m_iFontDPI, m_iFontDPI);
 
 	// create texture atlas
-	const int atlasSize = (m_iFontDPI > 96 ? (m_iFontDPI > 2*96 ? 2048 : 1024) : 512); // HACKHACK: hardcoded max atlas size, and heuristic
+	const int required = static_cast<int>(std::ceil(std::sqrt(static_cast<float>(m_vGlyphs.size()))))
+		* (static_cast<int>(std::ceil(m_iFontSize * m_iFontDPI / 72.0f)) + 4);
+	int atlasSize = 512;
+	while (atlasSize < required) atlasSize *= 2;
 	engine->getResourceManager()->requestNextLoadUnmanaged();
 	m_textureAtlas = engine->getResourceManager()->createTextureAtlas(atlasSize, atlasSize);
 
@@ -144,6 +149,7 @@ void McFont::initAsync()
 
 void McFont::destroy()
 {
+	m_unicodePages.clear();
 	SAFE_DELETE(m_textureAtlas);
 
 	m_vGlyphMetrics = std::unordered_map<wchar_t, GLYPH_METRICS>();
@@ -167,18 +173,15 @@ void McFont::drawString(Graphics *g, UString text)
 
 	const int maxNumGlyphs = r_drawstring_max_string_length.getInt();
 
-	// texture atlas rendering
-	m_textureAtlas->getAtlasImage()->bind();
+	float advanceX = 0.0f;
+	static VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS);
+	for (int i = 0; i < text.length() && i < maxNumGlyphs;)
 	{
-		float advanceX = 0.0f;
-		static VertexArrayObject vao(Graphics::PRIMITIVE::PRIMITIVE_QUADS); // keep memory, avoid reallocations
+		auto &font = glyphFont(text[i]);
 		vao.empty();
-
-		for (int i=0; i<text.length() && i<maxNumGlyphs; i++)
-		{
-			addAtlasGlyphToVao(g, text[i], advanceX, &vao);
-		}
-
+		do { font.addAtlasGlyphToVao(g, text[i++], advanceX, &vao); }
+		while (i < text.length() && i < maxNumGlyphs && &glyphFont(text[i]) == &font);
+		font.m_textureAtlas->getAtlasImage()->bind();
 		g->drawVAO(&vao);
 	}
 	if (r_debug_drawstring_unbind.getBool())
@@ -260,6 +263,8 @@ const McFont::GLYPH_METRICS &McFont::getGlyphMetrics(wchar_t ch) const
 {
 	if (m_vGlyphMetrics.find(ch) != m_vGlyphMetrics.end())
 		return m_vGlyphMetrics.at(ch);
+	if (ch >= 256 && m_sFilePath != r_font_unicode_file.getString())
+		return glyphFont(ch).getGlyphMetrics(ch);
 	else if (m_vGlyphMetrics.find(UNKNOWN_CHAR) != m_vGlyphMetrics.end())
 		return m_vGlyphMetrics.at(UNKNOWN_CHAR);
 	else
@@ -271,7 +276,24 @@ const McFont::GLYPH_METRICS &McFont::getGlyphMetrics(wchar_t ch) const
 
 const bool McFont::hasGlyph(wchar_t ch) const
 {
-	return (m_vGlyphMetrics.find(ch) != m_vGlyphMetrics.end());
+	return glyphFont(ch).m_vGlyphMetrics.find(ch) != glyphFont(ch).m_vGlyphMetrics.end();
+}
+
+McFont &McFont::glyphFont(wchar_t ch) const
+{
+	if (ch < 256 || m_vGlyphMetrics.find(ch) != m_vGlyphMetrics.end()
+		|| m_sFilePath == r_font_unicode_file.getString()) return *const_cast<McFont *>(this);
+	const unsigned int page = static_cast<unsigned int>(ch) / 128;
+	const auto found = m_unicodePages.find(page);
+	if (found != m_unicodePages.end()) return *found->second;
+	std::vector<wchar_t> characters(1, UNKNOWN_CHAR);
+	for (unsigned int code = page * 128; code < (page + 1) * 128; ++code)
+		characters.push_back(static_cast<wchar_t>(code));
+	std::unique_ptr<McFont> font(new McFont(r_font_unicode_file.getString(), characters, m_iFontSize, m_bAntialiasing, m_iFontDPI));
+	engine->getResourceManager()->loadResource(font.get());
+	auto &result = *font;
+	m_unicodePages.emplace(page, std::move(font));
+	return result;
 }
 
 
