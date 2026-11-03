@@ -1,0 +1,3 @@
+LIBRARY bass.dll
+EXPORTS
+    BASS_IsStarted@0
