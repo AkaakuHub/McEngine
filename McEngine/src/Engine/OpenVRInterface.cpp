@@ -36,8 +36,8 @@
 
 ConVar vr_bug_workaround_triggerhapticpulse("vr_bug_workaround_triggerhapticpulse", true, FCVAR_NONE);
 
-ConVar vr_ss("vr_ss", 1.3f, FCVAR_NONE, "internal engine supersampling factor. the recommended rendertarget size, as reported by OpenVR, is multiplied by this value");
-ConVar vr_ss_compositor("vr_ss_compositor", 1.6f, FCVAR_NONE, "external compositor submission texture supersampling factor. the recommended rendertarget size, as reported by OpenVR, is multiplied by this value");
+ConVar vr_ss("vr_ss", 1.0f, FCVAR_NONE, "internal engine supersampling factor. the recommended rendertarget size, as reported by OpenVR, is multiplied by this value");
+ConVar vr_ss_compositor("vr_ss_compositor", 1.0f, FCVAR_NONE, "external compositor submission texture supersampling factor. the recommended rendertarget size, as reported by OpenVR, is multiplied by this value");
 ConVar vr_compositor_submit_double("vr_compositor_submit_double", true, FCVAR_NONE, "use separate submission texture for each eye (trades VRAM for speed/compatibility)");
 ConVar vr_compositor_texture_size_max("vr_compositor_texture_size_max", 4096.0f, FCVAR_NONE, "submission texture size is force clamped to less or equal to this value");
 ConVar vr_aa("vr_aa", 2.0f, FCVAR_NONE, "antialiasing/multisampling factor. valid values are: 0, 2, 4, 8, 16");
