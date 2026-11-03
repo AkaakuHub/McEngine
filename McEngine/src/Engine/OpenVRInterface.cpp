@@ -653,6 +653,18 @@ void OpenVRInterface::draw(Graphics *g)
 
 #endif
 
+	if (!isHeadsetInUse())
+	{
+		if (vr_spectator_mode.getBool() || m_spectatorSubjectHeight > 0)
+		{
+			g->setDepthBuffer(true);
+			renderSpectatorTarget(g, m_leftEye);
+			g->setDepthBuffer(false);
+			renderStereoToWindow(g);
+		}
+		return;
+	}
+
 	if (!updateMatrixPoses()) return;
 
 	// debug
